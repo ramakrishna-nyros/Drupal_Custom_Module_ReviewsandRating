@@ -1,0 +1,243 @@
+<?php
+/**
+ * @file
+ * Module for managing customer ratings.
+ */
+
+/**
+ * Implements hook_help().
+ */
+  function rating_help($path,$arg)
+  {
+  	switch ($path) 
+    {
+  		case "admin/help#rating":
+  			return "<p>".t("Used for managing customer reviews and rating.")."</p>";
+  			break;
+  	}
+  }
+
+/**
+ * Implements hook_permission().
+ */
+  function rating_permission()
+  {
+    $arr=array(
+      'rating' => array('title' => t('Manage ratings'),),
+      'administrator rating form' => array('title' => t('Administrator rating form'),)
+      );
+
+    return $arr;
+  }
+
+/**
+ * Implements hook_block_info().
+ */
+  function rating_block_info()
+  	{
+  		$blocks['myrating']=array(
+  			'info' => t('rating'),
+        'cache' => DRUPAL_CACHE_PER_ROLE,
+
+  			);
+  		return $blocks;
+  	}
+/**
+ * Get the all the customers data from the db table.
+ */
+
+	function rating_contents()
+		{
+			$query = db_select('myrating', 'r')
+		    ->fields('r', array('rid', 'name','rating', 'comment'))
+        ->condition('status',1,'=')
+		    ->orderBy('rid', 'DESC') 
+		    ->execute();
+       
+		  return $query;
+		}
+/**
+ * Display the data in block.
+ */
+function rating_block_view($delta = '') 
+{
+	global $out;
+  switch ($delta) 
+  {
+    case 'myrating':
+
+      		$block['subject'] = t('rating');
+      		if (user_access('access content')) 
+      		{
+      			  $result = rating_contents();
+      			  $items = array();
+ 			      foreach ($result as $node) 
+        		{
+	         		$items[] = array('data' => t($node->name.'<br>'.$node->rating.'<br>'.$node->comment));
+	          		if (empty($items)) 
+	          		{
+	          		 $block['content'] = t('No comments available.');	       	 
+	       	 		  }
+	        		 else 
+	        		  {	          			
+        	        $out.="<b>".t($node->name).'</b><br>';
+        	        $out.= "<small>".t($node->comment).'</small><br>';
+        	        $out.="Rating:";
+	             if(floor($node->rating ) != $node->rating)
+          			{
+          		for ($i=0; $i < floor( $node->rating ) ; $i++) 
+              { 
+          		  $out.= "<img src='sites/all/modules/rating/images/active.png'>";
+          	  }
+          	 $out.= "<img src='sites/all/modules/rating/images/half.png'>";
+            }
+            else
+            {
+            	for ($i=0; $i < floor( $node->rating ) ; $i++) 
+              { 
+            		$out.= "<img src='sites/all/modules/rating/images/active.png'>";
+            	}
+            }
+		        $out.='<br><br>';
+	        	$block['content']=$out;		
+	        		}
+      			}
+   				return $block;
+  			}
+  	break;
+	}
+}
+
+/**
+ * Implements hook_menu().
+ */
+function rating_menu() {
+  
+ $items['rating/%rating/edit'] = array(
+    'title' => 'Edit Customer Rating',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rating_edit_form',1),
+    'access arguments' => array('administrator rating form'),
+    'file' => 'rating.admin.inc',
+    
+    );
+  $items['rating/%rating/delete'] = array(
+    'title' => 'Delete contact category',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rating_delete_form',1),
+    'access arguments' => array('administrator rating form'),
+    'file' => 'rating.admin.inc',
+    
+    );
+  $items['rating/%rating/approve'] = array(
+    'title' => 'Approve the customer review',
+    'page callback' => 'rating_approve',
+    'page arguments' => array(1),
+    'access arguments' => array('administrator rating form'),
+    'file' => 'rating.admin.inc',
+    
+    );
+  $items['rating/%rating/unapprove'] = array(
+    'title' => 'Delete contact category',
+    'page callback' => 'rating_unapprove',
+    'page arguments' => array(1),
+    'access arguments' => array('administrator rating form'),
+    'file' => 'rating.admin.inc',
+    
+    );
+  $items['admin/config/content/rating'] = array(
+    'title' => 'Rating',
+    'description' => 'Configure the reviews & ratings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rating_admin_form'),
+    'access arguments' => array('rating module'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'rating.admin.inc',
+  );
+ 
+  $items['rating'] = array(
+    'title' => 'Rating',
+    'description' => t('Give rating about our services'),
+    'menu_name'       => 'main-menu',
+    'weight'          => 8,
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('rating_form'),
+    'access callback' => TRUE,
+    ); 
+  
+  return $items;
+}
+
+/**
+ * loads the customer data based on id from the db table.
+ */
+function rating_load($rid) {
+  return db_select('myrating', 'r')
+    ->fields('r',array('rid','name','rating','comment','status'))
+    ->condition('rid', $rid)
+    ->execute()
+    ->fetchAssoc();
+}
+
+/**
+ * customer form.
+ */
+function rating_form($form,&$form_submit) 
+{
+ $form['name'] = array(
+    '#title' => t('Name'),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+  );
+   $form['rating'] = array(
+    '#type' => 'select',
+    '#title' => t('Select your rating about our services'),
+    '#options' => array(
+    '' => '',	
+      '1' => '1',
+      '1.5' => '1.5',
+      '2' => '2',
+      '2.5' => '2.5',
+      '3' => '3',
+      '3.5' => '3.5',
+      '4' => '4',
+      '4.5' => '4.5',
+      '5' => '5',
+    ),
+     '#required' => TRUE,
+     '#style' => 'display:inline',
+  );
+    $form['comments'] = array(
+    '#title' => t('Comments'),
+    '#type' => 'textarea',
+    '#required' => TRUE,
+  );
+  $form['submit'] = array(
+    '#value' => 'Submit',
+    '#type' => 'submit',
+    );
+
+  return $form;
+}
+
+/**
+ * Form submission handler for customer form.
+ */
+function rating_form_submit($form,&$form_submit)
+{
+	 $name = check_plain($form_submit['values']['name']);
+   $rating = check_plain($form_submit['values']['rating']);
+	 $comments = check_plain($form_submit['values']['comments']);
+   $status = 0;
+   $result= db_insert('myrating')->fields(array(
+  'name' => $name,
+  'rating' =>$rating,
+  'comment' => $comments,
+  'status' => $status,))
+  ->execute();
+  if ($result !== FALSE)
+  {
+  drupal_set_message('your rating saved successfully.');
+  }
+}
+

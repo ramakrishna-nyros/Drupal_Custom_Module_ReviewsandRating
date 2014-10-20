@@ -1,0 +1,60 @@
+<?php
+
+function rating_schema()
+{
+	
+	$schema['myrating'] = array(
+  'description' => 'This table store customer reviews',
+  'fields' => array(
+    'rid' => array(
+      'description' => 'id of review table',
+      'type' => 'serial',
+      'not null' => TRUE,
+    ),
+    'name' => array(
+      'description' => 'name of customer',
+      'type' => 'varchar',
+      'length' => '100',
+      'not null' => TRUE,
+    ),
+    'rating' => array(
+      'description' => 'rating given by customer',
+      'type' => 'numeric',
+      'not null' => TRUE,
+      'precision' => '2',
+      'scale' => '1',
+    ),
+    'comment' => array(
+      'description' => 'reviews given by customer',
+      'type' => 'varchar',
+      'length' => '1000',
+      'not null' => TRUE,
+    ),
+    'status' => array(
+      'description' => 'status of the comment',
+      'type' => 'int',
+      'default' => 0,
+      'not null' => TRUE,
+    ),
+  ),
+  'primary key' => array('rid'),
+  'unique keys' => array(
+    'rid' => array('rid')
+  ),
+);
+	return $schema;
+}
+
+/**
+ * Implements hook_install()
+ */
+function rating_install(){
+  
+}
+
+/**
+ * Implements hook_uninstall()
+ */
+function rating_uninstall(){
+  
+}
